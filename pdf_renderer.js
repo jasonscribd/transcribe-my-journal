@@ -1,14 +1,34 @@
 // pdf_renderer.js
 // Utilities to load a PDF file (File object) and render each page to an Image object
 
-const pdfjsLib = window['pdfjsLib'];
-if (pdfjsLib) {
-  // Use CDN worker
-  pdfjsLib.GlobalWorkerOptions.workerSrc =
-    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.269/pdf.worker.min.js';
+const PDF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.269';
+let pdfjsReady;
+
+function loadPdfJs() {
+  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if (pdfjsReady) return pdfjsReady;
+
+  pdfjsReady = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = `${PDF_CDN}/pdf.min.js`;
+    script.onload = () => {
+      const lib = window.pdfjsLib;
+      if (lib) {
+        lib.GlobalWorkerOptions.workerSrc = `${PDF_CDN}/pdf.worker.min.js`;
+        resolve(lib);
+      } else {
+        reject(new Error('pdfjsLib not found after script load'));
+      }
+    };
+    script.onerror = () => reject(new Error('Failed to load pdf.js'));
+    document.head.appendChild(script);
+  });
+
+  return pdfjsReady;
 }
 
 export async function loadPdfAsImages(file) {
+  const pdfjsLib = await loadPdfJs();
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const images = [];
