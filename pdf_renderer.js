@@ -1,11 +1,13 @@
 // pdf_renderer.js
 // Utilities to load a PDF file (File object) and render each page to an Image object
 
+const LOCAL_BASE = './libs/pdfjs';
 const CDN_TRIES = [
   // Older stable ES5 build
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/build',
   // jsDelivr equivalent
   'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build',
+  LOCAL_BASE, // fallback to local copy
 ];
 let pdfjsReady;
 
