@@ -2,23 +2,26 @@
 // Lightweight wrapper for calling the OpenAI vision model via fetch
 
 export async function transcribeImage(dataUrl, apiKey, model = 'gpt-4o-mini', prompt = '') {
-  // Convert dataURL to base64 without prefix
-  const base64 = dataUrl.split(',')[1];
   const payload = {
     model,
     messages: [
       {
         role: 'system',
-        content: prompt || 'You are a helpful assistant that transcribes handwritten text.',
+        content:
+          prompt ||
+          'You are a helpful assistant that accurately transcribes any handwritten text you are shown into clear, well-punctuated plain text.',
       },
       {
         role: 'user',
         content: [
           {
+            type: 'text',
+            text: 'Please transcribe the handwritten text in this image.',
+          },
+          {
             type: 'image_url',
             image_url: {
-              mime_type: 'image/png',
-              data: base64,
+              url: dataUrl, // pass full data URL (base64)
             },
           },
         ],
