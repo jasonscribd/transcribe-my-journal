@@ -1,28 +1,41 @@
 // pdf_renderer.js
 // Utilities to load a PDF file (File object) and render each page to an Image object
 
-const PDF_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.269';
+const CDN_TRIES = [
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.269',
+  'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.269/build',
+];
 let pdfjsReady;
 
-function loadPdfJs() {
-  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function loadPdfJs() {
+  if (window.pdfjsLib) return window.pdfjsLib;
   if (pdfjsReady) return pdfjsReady;
 
-  pdfjsReady = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = `${PDF_CDN}/pdf.min.js`;
-    script.onload = () => {
-      const lib = window.pdfjsLib;
-      if (lib) {
-        lib.GlobalWorkerOptions.workerSrc = `${PDF_CDN}/pdf.worker.min.js`;
-        resolve(lib);
-      } else {
-        reject(new Error('pdfjsLib not found after script load'));
+  pdfjsReady = (async () => {
+    let lastErr;
+    for (const base of CDN_TRIES) {
+      try {
+        await loadScript(`${base}/pdf.min.js`);
+        if (window.pdfjsLib) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${base}/pdf.worker.min.js`;
+          return window.pdfjsLib;
+        }
+      } catch (err) {
+        lastErr = err;
       }
-    };
-    script.onerror = () => reject(new Error('Failed to load pdf.js'));
-    document.head.appendChild(script);
-  });
+    }
+    throw lastErr || new Error('Unable to load pdf.js from any CDN');
+  })();
 
   return pdfjsReady;
 }
