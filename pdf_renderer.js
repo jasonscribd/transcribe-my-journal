@@ -2,8 +2,10 @@
 // Utilities to load a PDF file (File object) and render each page to an Image object
 
 const CDN_TRIES = [
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.269',
-  'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.269/build',
+  // Older stable ES5 build
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/build',
+  // jsDelivr equivalent
+  'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build',
 ];
 let pdfjsReady;
 
@@ -11,6 +13,7 @@ function loadScript(src) {
   return new Promise((resolve, reject) => {
     const s = document.createElement('script');
     s.src = src;
+    s.crossOrigin = 'anonymous';
     s.onload = resolve;
     s.onerror = reject;
     document.head.appendChild(s);
