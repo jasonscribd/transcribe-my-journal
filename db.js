@@ -21,12 +21,23 @@ function openDb() {
   });
 }
 
+function toStorable(project) {
+  const pages = project.pages.map((p) => ({
+    imageSrc: p.image ? p.image.src : p.imageSrc || '',
+    transcript: p.transcript,
+    status: p.status,
+  }));
+  const { image, ...rest } = project; // not expected but just in case
+  return { ...rest, pages };
+}
+
 export async function saveProject(project) {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite');
     const store = tx.objectStore(STORE);
-    store.put(project);
+    const storable = toStorable(project);
+    store.put(storable);
     tx.oncomplete = () => {
       db.close();
       resolve();
