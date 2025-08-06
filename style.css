@@ -98,3 +98,24 @@ header h1 {
 .hidden {
   display: none !important;
 }
+
+/* Status overlay shown during processing */
+#statusOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1200;
+}
+#statusOverlay p {
+  background: #ffffff;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  color: #333;
+}

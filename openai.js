@@ -38,7 +38,14 @@ export async function transcribeImage(dataUrl, apiKey, model = 'gpt-4o-mini', pr
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    throw new Error(`OpenAI API error: ${res.status} ${res.statusText}`);
+    let detail = '';
+    try {
+      const errJson = await res.json();
+      detail = errJson.error?.message || JSON.stringify(errJson);
+    } catch {
+      detail = await res.text();
+    }
+    throw new Error(`OpenAI API error: ${res.status} ${res.statusText}: ${detail}`);
   }
   const json = await res.json();
   const text = json.choices?.[0]?.message?.content?.trim() || '';

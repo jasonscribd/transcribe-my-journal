@@ -12,6 +12,18 @@ const pageCanvas = document.getElementById('pageCanvas');
 const transcriptArea = document.getElementById('transcriptArea');
 const exportBtn = document.getElementById('exportBtn');
 
+// Status overlay elements
+const statusOverlay = document.getElementById('statusOverlay');
+const statusText = document.getElementById('statusText');
+function showStatus(message = 'Processing…') {
+  statusText.textContent = message;
+  statusOverlay.classList.remove('hidden');
+}
+function hideStatus() {
+  statusOverlay.classList.add('hidden');
+}
+
+
 // Settings dialog elements
 const settingsBtn = document.getElementById('settingsBtn');
 const settingsDialog = document.getElementById('settingsDialog');
@@ -100,6 +112,7 @@ async function transcribeCurrentPage() {
   const page = state.project.pages[state.currentPageIndex];
   page.status = 'working';
   renderPageList();
+  showStatus(`Transcribing page ${state.currentPageIndex + 1}…`);
 
   const dataUrl = pageCanvas.toDataURL('image/png');
   try {
@@ -107,11 +120,13 @@ async function transcribeCurrentPage() {
     page.transcript = text;
     page.status = 'done';
     transcriptArea.value = text;
+    hideStatus();
     await saveProject(state.project);
     renderPageList();
   } catch (err) {
     console.error(err);
     alert('Failed to transcribe page. See console.');
+    hideStatus();
     page.status = 'pending';
     renderPageList();
   }
