@@ -7,10 +7,21 @@ import { exportTxt } from './exporter.js';
 const fileInput = document.getElementById('fileInput');
 const uploadBtn = document.getElementById('uploadBtn');
 const dropOverlay = document.getElementById('dropOverlay');
-const pageList = document.getElementById('pageList');
 const pageCanvas = document.getElementById('pageCanvas');
 const transcriptArea = document.getElementById('transcriptArea');
 const exportBtn = document.getElementById('exportBtn');
+
+// New simplified UI elements
+const emptyState = document.getElementById('emptyState');
+const imagePane = document.getElementById('imagePane');
+const transcriptPane = document.getElementById('transcriptPane');
+const viewToggle = document.getElementById('viewToggle');
+const showImageBtn = document.getElementById('showImageBtn');
+const showTranscriptBtn = document.getElementById('showTranscriptBtn');
+const pageNavigation = document.getElementById('pageNavigation');
+const prevPageBtn = document.getElementById('prevPageBtn');
+const nextPageBtn = document.getElementById('nextPageBtn');
+const pageIndicator = document.getElementById('pageIndicator');
 
 // Status overlay elements
 const statusOverlay = document.getElementById('statusOverlay');
@@ -22,7 +33,6 @@ function showStatus(message = 'Processing…') {
 function hideStatus() {
   statusOverlay.classList.add('hidden');
 }
-
 
 // Settings dialog elements
 const settingsBtn = document.getElementById('settingsBtn');
@@ -37,25 +47,59 @@ const exportAllBtn = document.getElementById('exportAllBtn');
 let state = {
   project: null, // { id, title, createdAt, pages: [...] }
   currentPageIndex: 0,
+  currentView: 'image', // 'image' or 'transcript'
 };
 
-function renderPageList() {
-  pageList.innerHTML = '';
-  state.project.pages.forEach((p, idx) => {
-    const li = document.createElement('li');
-    li.textContent = `Page ${idx + 1} ${p.status === 'done' ? '✅' : ''}`;
-    if (idx === state.currentPageIndex) li.classList.add('active');
-    li.addEventListener('click', () => selectPage(idx));
-    pageList.appendChild(li);
-  });
+function updatePageNavigation() {
+  if (!state.project || state.project.pages.length <= 1) {
+    pageNavigation.classList.add('hidden');
+    return;
+  }
+  
+  pageNavigation.classList.remove('hidden');
+  pageIndicator.textContent = `Page ${state.currentPageIndex + 1} of ${state.project.pages.length}`;
+  prevPageBtn.disabled = state.currentPageIndex === 0;
+  nextPageBtn.disabled = state.currentPageIndex === state.project.pages.length - 1;
 }
 
-function selectPage(idx) {
-  state.currentPageIndex = idx;
-  const page = state.project.pages[idx];
+function showPage(pageIndex) {
+  if (!state.project || pageIndex < 0 || pageIndex >= state.project.pages.length) return;
+  
+  state.currentPageIndex = pageIndex;
+  const page = state.project.pages[pageIndex];
+  
+  // Always show the image
   drawImageOnCanvas(page.image);
+  pageCanvas.classList.remove('hidden');
+  emptyState.classList.add('hidden');
+  
+  // Update transcript area
   transcriptArea.value = page.transcript || '';
-  renderPageList();
+  
+  // Show view toggle
+  viewToggle.classList.remove('hidden');
+  
+  // Auto-transcribe if no transcript exists
+  if (!page.transcript && page.status === 'pending') {
+    transcribeCurrentPage();
+  }
+  
+  updatePageNavigation();
+  updateView();
+}
+
+function updateView() {
+  if (state.currentView === 'image') {
+    imagePane.classList.remove('hidden');
+    transcriptPane.classList.add('hidden');
+    showImageBtn.classList.add('active');
+    showTranscriptBtn.classList.remove('active');
+  } else {
+    imagePane.classList.add('hidden');
+    transcriptPane.classList.remove('hidden');
+    showImageBtn.classList.remove('active');
+    showTranscriptBtn.classList.add('active');
+  }
 }
 
 function drawImageOnCanvas(img) {
@@ -70,29 +114,48 @@ async function handleFiles(files) {
   const file = files[0];
   if (!file) return;
 
+  showStatus('Loading file...');
+
   let pagesData = [];
-  if (file.type === 'application/pdf') {
-    const images = await loadPdfAsImages(file);
-    pagesData = images.map((img) => ({ image: img, transcript: '', status: 'pending' }));
-  } else if (file.type.startsWith('image/')) {
-    const imgUrl = URL.createObjectURL(file);
-    const img = await loadImage(imgUrl);
-    pagesData = [{ image: img, transcript: '', status: 'pending' }];
-  } else {
-    alert('Unsupported file type. Please drop a PDF or image.');
-    return;
+  try {
+    if (file.type === 'application/pdf') {
+      const images = await loadPdfAsImages(file);
+      pagesData = images.map((img) => ({ image: img, transcript: '', status: 'pending' }));
+    } else if (file.type.startsWith('image/')) {
+      const imgUrl = URL.createObjectURL(file);
+      const img = await loadImage(imgUrl);
+      pagesData = [{ image: img, transcript: '', status: 'pending' }];
+    } else {
+      hideStatus();
+      alert('Unsupported file type. Please drop a PDF or image.');
+      return;
+    }
+
+    state.project = {
+      title: file.name,
+      createdAt: Date.now(),
+      pages: pagesData,
+    };
+    
+    // Convert images to storable format for saving
+    const storableProject = {
+      ...state.project,
+      pages: state.project.pages.map(p => ({
+        imageSrc: p.image.src,
+        transcript: p.transcript,
+        status: p.status
+      }))
+    };
+    await saveProject(storableProject);
+
+    hideStatus();
+    showPage(0);
+    exportBtn.disabled = false;
+  } catch (error) {
+    hideStatus();
+    console.error('Error loading file:', error);
+    alert('Error loading file. Please try again.');
   }
-
-  state.project = {
-    title: file.name,
-    createdAt: Date.now(),
-    pages: pagesData,
-  };
-  await saveProject(state.project);
-
-  renderPageList();
-  selectPage(0);
-  exportBtn.disabled = false;
 }
 
 function loadImage(src) {
@@ -107,12 +170,12 @@ function loadImage(src) {
 async function transcribeCurrentPage() {
   const { apiKey, model, prompt } = await getConfig();
   if (!apiKey) {
-    alert('Please set your OpenAI API key in Settings.');
+    alert('Please set your OpenAI API key in Settings first.');
     return;
   }
+  
   const page = state.project.pages[state.currentPageIndex];
   page.status = 'working';
-  renderPageList();
   showStatus(`Transcribing page ${state.currentPageIndex + 1}…`);
 
   const dataUrl = pageCanvas.toDataURL('image/png');
@@ -121,15 +184,28 @@ async function transcribeCurrentPage() {
     page.transcript = text;
     page.status = 'done';
     transcriptArea.value = text;
+    
+    // Save updated project
+    const storableProject = {
+      ...state.project,
+      pages: state.project.pages.map(p => ({
+        imageSrc: p.image.src,
+        transcript: p.transcript,
+        status: p.status
+      }))
+    };
+    await saveProject(storableProject);
+    
     hideStatus();
-    await saveProject(state.project);
-    renderPageList();
+    
+    // Switch to transcript view to show result
+    state.currentView = 'transcript';
+    updateView();
   } catch (err) {
     console.error(err);
-    alert('Failed to transcribe page. See console.');
+    alert('Failed to transcribe page. Please check your API key and try again.');
     hideStatus();
     page.status = 'pending';
-    renderPageList();
   }
 }
 
@@ -217,26 +293,53 @@ document.addEventListener('drop', (e) => {
   handleFiles(e.dataTransfer.files);
 });
 
-// Transcript area change updates state and auto-save
-transcriptArea.addEventListener('input', async () => {
-  const page = state.project.pages[state.currentPageIndex];
-  page.transcript = transcriptArea.value;
-  await saveProject(state.project);
+// Page navigation
+prevPageBtn.addEventListener('click', () => {
+  if (state.currentPageIndex > 0) {
+    showPage(state.currentPageIndex - 1);
+  }
 });
 
-// Double-click canvas to transcribe
-pageCanvas.addEventListener('dblclick', transcribeCurrentPage);
+nextPageBtn.addEventListener('click', () => {
+  if (state.currentPageIndex < state.project.pages.length - 1) {
+    showPage(state.currentPageIndex + 1);
+  }
+});
 
-// Export TXT
+// View toggle
+showImageBtn.addEventListener('click', () => {
+  state.currentView = 'image';
+  updateView();
+});
+
+showTranscriptBtn.addEventListener('click', () => {
+  state.currentView = 'transcript';
+  updateView();
+});
+
+// Export current project
 exportBtn.addEventListener('click', () => {
   if (!state.project) return;
   exportTxt(state.project.pages);
 });
 
-// Load existing projects on startup (simple console list for now)
-(async () => {
-  const projects = await getAllProjects();
-  if (projects.length) {
-    console.log('Existing projects in DB:', projects.map((p) => p.title));
-  }
-})();
+// Transcript area updates (make it editable)
+transcriptArea.addEventListener('input', async () => {
+  if (!state.project) return;
+  const page = state.project.pages[state.currentPageIndex];
+  page.transcript = transcriptArea.value;
+  
+  // Save updated project
+  const storableProject = {
+    ...state.project,
+    pages: state.project.pages.map(p => ({
+      imageSrc: p.image.src,
+      transcript: p.transcript,
+      status: p.status
+    }))
+  };
+  await saveProject(storableProject);
+});
+
+// Remove readonly from transcript area
+transcriptArea.removeAttribute('readonly');
