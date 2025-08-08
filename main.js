@@ -32,6 +32,7 @@ const modelInput = document.getElementById('modelInput');
 const promptInput = document.getElementById('promptInput');
 const resetKeyBtn = document.getElementById('resetKeyBtn');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+const exportAllBtn = document.getElementById('exportAllBtn');
 
 let state = {
   project: null, // { id, title, createdAt, pages: [...] }
@@ -158,6 +159,44 @@ resetKeyBtn.addEventListener('click', () => {
 });
 
 closeSettingsBtn.addEventListener('click', () => settingsDialog.close());
+
+// Export all transcripts functionality
+exportAllBtn.addEventListener('click', async () => {
+  const projects = await getAllProjects();
+  if (projects.length === 0) {
+    alert('No transcripts found to export.');
+    return;
+  }
+  
+  let allText = '';
+  projects.forEach((project, projectIndex) => {
+    allText += `=== ${project.title || `Project ${projectIndex + 1}`} ===\n`;
+    allText += `Created: ${new Date(project.createdAt).toLocaleDateString()}\n\n`;
+    
+    project.pages.forEach((page, pageIndex) => {
+      if (page.transcript && page.transcript.trim()) {
+        allText += `--- Page ${pageIndex + 1} ---\n`;
+        allText += `${page.transcript.trim()}\n\n`;
+      }
+    });
+    allText += '\n';
+  });
+  
+  if (allText.trim() === '') {
+    alert('No transcripts found to export.');
+    return;
+  }
+  
+  const blob = new Blob([allText], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `journal-transcripts-${new Date().toISOString().split('T')[0]}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  alert(`Exported ${projects.length} project(s) to journal-transcripts-${new Date().toISOString().split('T')[0]}.txt`);
+});
 
 // Upload & drag-drop
 uploadBtn.addEventListener('click', () => fileInput.click());
