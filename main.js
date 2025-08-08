@@ -119,15 +119,22 @@ async function handleFiles(files) {
   let pagesData = [];
   try {
     if (file.type === 'application/pdf') {
-      const images = await loadPdfAsImages(file);
-      pagesData = images.map((img) => ({ image: img, transcript: '', status: 'pending' }));
+      try {
+        const images = await loadPdfAsImages(file);
+        pagesData = images.map((img) => ({ image: img, transcript: '', status: 'pending' }));
+      } catch (pdfError) {
+        hideStatus();
+        console.error('PDF loading error:', pdfError);
+        alert('Error loading PDF. Please try uploading an image instead, or check if the PDF is corrupted.');
+        return;
+      }
     } else if (file.type.startsWith('image/')) {
       const imgUrl = URL.createObjectURL(file);
       const img = await loadImage(imgUrl);
       pagesData = [{ image: img, transcript: '', status: 'pending' }];
     } else {
       hideStatus();
-      alert('Unsupported file type. Please drop a PDF or image.');
+      alert('Unsupported file type. Please upload a PDF or image (JPG, PNG).');
       return;
     }
 
@@ -154,7 +161,7 @@ async function handleFiles(files) {
   } catch (error) {
     hideStatus();
     console.error('Error loading file:', error);
-    alert('Error loading file. Please try again.');
+    alert('Error loading file. Please try again or use a different file format.');
   }
 }
 

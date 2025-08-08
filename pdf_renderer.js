@@ -3,11 +3,10 @@
 
 const LOCAL_BASE = './libs/pdfjs';
 const CDN_TRIES = [
-  // Older stable ES5 build
-  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/build',
-  // jsDelivr equivalent
+  LOCAL_BASE, // Use local copy first to avoid CORS issues
+  // Fallback CDNs if local fails
   'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build',
-  LOCAL_BASE, // fallback to local copy
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/build',
 ];
 let pdfjsReady;
 
