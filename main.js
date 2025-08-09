@@ -22,6 +22,8 @@ const pageNavigation = document.getElementById('pageNavigation');
 const prevPageBtn = document.getElementById('prevPageBtn');
 const nextPageBtn = document.getElementById('nextPageBtn');
 const pageIndicator = document.getElementById('pageIndicator');
+const batchTranscribeBtn = document.getElementById('batchTranscribeBtn');
+const toggleAutoTranscribeBtn = document.getElementById('toggleAutoTranscribeBtn');
 
 // Status overlay elements
 const statusOverlay = document.getElementById('statusOverlay');
@@ -48,6 +50,8 @@ let state = {
   project: null, // { id, title, createdAt, pages: [...] }
   currentPageIndex: 0,
   currentView: 'image', // 'image' or 'transcript'
+  autoTranscribeDisabled: false,
+  batchTranscribing: false,
 };
 
 function updatePageNavigation() {
@@ -79,8 +83,8 @@ function showPage(pageIndex) {
   // Show view toggle
   viewToggle.classList.remove('hidden');
   
-  // Auto-transcribe if no transcript exists
-  if (!page.transcript && page.status === 'pending') {
+  // Auto-transcribe if no transcript exists and user hasn't disabled auto-transcribe
+  if (!page.transcript && page.status === 'pending' && !state.autoTranscribeDisabled) {
     transcribeCurrentPage();
   }
   
@@ -346,6 +350,109 @@ transcriptArea.addEventListener('input', async () => {
     }))
   };
   await saveProject(storableProject);
+});
+
+// Batch transcription
+batchTranscribeBtn.addEventListener('click', async () => {
+  if (!state.project || state.batchTranscribing) return;
+  
+  const { apiKey, model, prompt } = await getConfig();
+  if (!apiKey) {
+    alert('Please set your OpenAI API key in Settings first.');
+    return;
+  }
+  
+  const pendingPages = state.project.pages.filter(p => !p.transcript || p.status === 'pending');
+  if (pendingPages.length === 0) {
+    alert('All pages are already transcribed!');
+    return;
+  }
+  
+  const confirmed = confirm(`This will transcribe ${pendingPages.length} pages. This may take several minutes and will use ${pendingPages.length} API calls. Continue?`);
+  if (!confirmed) return;
+  
+  state.batchTranscribing = true;
+  batchTranscribeBtn.disabled = true;
+  batchTranscribeBtn.textContent = 'Transcribing...';
+  
+  let completed = 0;
+  for (let i = 0; i < state.project.pages.length; i++) {
+    const page = state.project.pages[i];
+    if (page.transcript && page.status === 'done') continue;
+    
+    showStatus(`Transcribing page ${i + 1} of ${state.project.pages.length}... (${completed + 1}/${pendingPages.length})`);
+    
+    try {
+      // Switch to this page to show progress
+      showPage(i);
+      
+      // Generate data URL for this page
+      const dataUrl = pageCanvas.toDataURL('image/png');
+      const text = await transcribeImage(dataUrl, apiKey, model, prompt);
+      
+      page.transcript = text;
+      page.status = 'done';
+      completed++;
+      
+      // Update transcript area if this is the current page
+      if (state.currentPageIndex === i) {
+        transcriptArea.value = text;
+      }
+      
+      // Save progress periodically
+      if (completed % 5 === 0) {
+        const storableProject = {
+          ...state.project,
+          pages: state.project.pages.map(p => ({
+            imageSrc: p.image.src,
+            transcript: p.transcript,
+            status: p.status
+          }))
+        };
+        await saveProject(storableProject);
+      }
+      
+      // Small delay to prevent API rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+    } catch (err) {
+      console.error(`Error transcribing page ${i + 1}:`, err);
+      page.status = 'error';
+      // Continue with other pages
+    }
+  }
+  
+  // Final save
+  const storableProject = {
+    ...state.project,
+    pages: state.project.pages.map(p => ({
+      imageSrc: p.image.src,
+      transcript: p.transcript,
+      status: p.status
+    }))
+  };
+  await saveProject(storableProject);
+  
+  hideStatus();
+  state.batchTranscribing = false;
+  batchTranscribeBtn.disabled = false;
+  batchTranscribeBtn.textContent = 'Transcribe All Pages';
+  
+  alert(`Batch transcription complete! Successfully transcribed ${completed} pages.`);
+});
+
+// Toggle auto-transcribe
+toggleAutoTranscribeBtn.addEventListener('click', () => {
+  state.autoTranscribeDisabled = !state.autoTranscribeDisabled;
+  toggleAutoTranscribeBtn.textContent = `Auto-transcribe: ${state.autoTranscribeDisabled ? 'OFF' : 'ON'}`;
+  
+  if (state.autoTranscribeDisabled) {
+    toggleAutoTranscribeBtn.classList.add('btn-warning');
+    toggleAutoTranscribeBtn.classList.remove('btn-secondary');
+  } else {
+    toggleAutoTranscribeBtn.classList.remove('btn-warning');
+    toggleAutoTranscribeBtn.classList.add('btn-secondary');
+  }
 });
 
 // Remove readonly from transcript area
