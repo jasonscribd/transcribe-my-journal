@@ -47,6 +47,8 @@ const promptInput = document.getElementById('promptInput');
 const resetKeyBtn = document.getElementById('resetKeyBtn');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 const exportAllBtn = document.getElementById('exportAllBtn');
+const compressImagesCheckbox = document.getElementById('compressImagesCheckbox');
+const maxTokensSelect = document.getElementById('maxTokensSelect');
 
 let state = {
   project: null, // { id, title, createdAt, pages: [...] }
@@ -238,9 +240,29 @@ function loadImage(src) {
   });
 }
 
+function compressCanvas(canvas, quality = 0.7) {
+  return new Promise((resolve) => {
+    canvas.toBlob(resolve, 'image/jpeg', quality);
+  });
+}
+
+async function getOptimizedImageData(canvas, compressImages = true) {
+  if (!compressImages) {
+    return canvas.toDataURL('image/png');
+  }
+  
+  // Compress image to reduce token usage
+  const blob = await compressCanvas(canvas, 0.7);
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+}
+
 async function transcribeCurrentPage() {
-  const { apiKey, model, prompt } = await getConfig();
-  if (!apiKey) {
+  const config = await getConfig();
+  if (!config.apiKey) {
     alert('Please set your OpenAI API key in Settings first.');
     return;
   }
@@ -249,9 +271,9 @@ async function transcribeCurrentPage() {
   page.status = 'working';
   showStatus(`Transcribing page ${state.currentPageIndex + 1}…`);
 
-  const dataUrl = pageCanvas.toDataURL('image/png');
   try {
-    const text = await transcribeImage(dataUrl, apiKey, model, prompt);
+    const dataUrl = await getOptimizedImageData(pageCanvas, config.compressImages);
+    const text = await transcribeImage(dataUrl, config.apiKey, config.model, config.prompt, config.maxTokens);
     page.transcript = text;
     page.status = 'done';
     transcriptArea.value = text;
@@ -282,10 +304,12 @@ async function transcribeCurrentPage() {
 
 // Settings
 settingsBtn.addEventListener('click', async () => {
-  const { apiKey, model, prompt } = await getConfig();
-  apiKeyInput.value = apiKey || '';
-  modelInput.value = model || 'gpt-4o-mini';
-  promptInput.value = prompt || promptInput.value;
+  const config = await getConfig();
+  apiKeyInput.value = config.apiKey || '';
+  modelInput.value = config.model || 'gpt-4o-mini';
+  promptInput.value = config.prompt || promptInput.value;
+  compressImagesCheckbox.checked = config.compressImages !== false; // default true
+  maxTokensSelect.value = config.maxTokens || '1000';
   settingsDialog.showModal();
 });
 
@@ -295,6 +319,8 @@ settingsDialog.addEventListener('submit', (e) => {
     apiKey: apiKeyInput.value.trim(),
     model: modelInput.value.trim(),
     prompt: promptInput.value.trim(),
+    compressImages: compressImagesCheckbox.checked,
+    maxTokens: maxTokensSelect.value,
   });
   settingsDialog.close();
 });
@@ -416,8 +442,8 @@ transcriptArea.addEventListener('input', async () => {
 batchTranscribeBtn.addEventListener('click', async () => {
   if (!state.project || state.batchTranscribing) return;
   
-  const { apiKey, model, prompt } = await getConfig();
-  if (!apiKey) {
+  const config = await getConfig();
+  if (!config.apiKey) {
     alert('Please set your OpenAI API key in Settings first.');
     return;
   }
@@ -446,9 +472,9 @@ batchTranscribeBtn.addEventListener('click', async () => {
       // Switch to this page to show progress
       showPage(i);
       
-      // Generate data URL for this page
-      const dataUrl = pageCanvas.toDataURL('image/png');
-      const text = await transcribeImage(dataUrl, apiKey, model, prompt);
+      // Generate optimized data URL for this page
+      const dataUrl = await getOptimizedImageData(pageCanvas, config.compressImages);
+      const text = await transcribeImage(dataUrl, config.apiKey, config.model, config.prompt, config.maxTokens);
       
       page.transcript = text;
       page.status = 'done';

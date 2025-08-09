@@ -1,9 +1,10 @@
 // openai.js
 // Lightweight wrapper for calling the OpenAI vision model via fetch
 
-export async function transcribeImage(dataUrl, apiKey, model = 'gpt-4o-mini', prompt = '') {
+export async function transcribeImage(dataUrl, apiKey, model = 'gpt-4o-mini', prompt = '', maxTokens = 1000) {
   const payload = {
     model,
+    max_tokens: parseInt(maxTokens),
     messages: [
       {
         role: 'system',

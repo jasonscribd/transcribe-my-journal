@@ -98,12 +98,31 @@
       </label>
       <label>
         Model Name
-        <input type="text" id="modelInput" value="gpt-4o-mini" />
+        <select id="modelInput">
+          <option value="gpt-4o-mini">GPT-4o Mini (Recommended - $0.15/1M tokens)</option>
+          <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Budget - $0.50/1M tokens)</option>
+          <option value="gpt-4o">GPT-4o (Premium - $2.50/1M tokens)</option>
+        </select>
       </label>
       <label>
         System Prompt
         <textarea id="promptInput" rows="4">You are a helpful assistant that accurately transcribes handwritten journal entries into clean, well-punctuated plain text while preserving line breaks and the personal tone.</textarea>
       </label>
+      <div class="settings-section">
+        <h3>Cost Optimization</h3>
+        <label>
+          <input type="checkbox" id="compressImagesCheckbox" checked />
+          Compress images before sending (reduces cost by ~30-50%)
+        </label>
+        <label>
+          Max tokens per request
+          <select id="maxTokensSelect">
+            <option value="500">500 tokens (Budget)</option>
+            <option value="1000" selected>1000 tokens (Balanced)</option>
+            <option value="2000">2000 tokens (Detailed)</option>
+          </select>
+        </label>
+      </div>
       <div class="settings-section">
         <h3>Export Options</h3>
         <button id="exportAllBtn" type="button" class="btn btn-secondary btn-full-width">
