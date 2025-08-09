@@ -25,6 +25,7 @@ const pageIndicator = document.getElementById('pageIndicator');
 const batchTranscribeBtn = document.getElementById('batchTranscribeBtn');
 const toggleAutoTranscribeBtn = document.getElementById('toggleAutoTranscribeBtn');
 const improveTextBtn = document.getElementById('improveTextBtn');
+const improveAllTextBtn = document.getElementById('improveAllTextBtn');
 
 // Status overlay elements
 const statusOverlay = document.getElementById('statusOverlay');
@@ -213,6 +214,7 @@ function updateUIForFileType() {
     batchTranscribeBtn.classList.add('hidden');
     toggleAutoTranscribeBtn.classList.add('hidden');
     improveTextBtn.classList.remove('hidden');
+    improveAllTextBtn.classList.remove('hidden');
     
     // Update page indicator text
     if (state.project.pages.length > 1) {
@@ -223,6 +225,7 @@ function updateUIForFileType() {
     batchTranscribeBtn.classList.remove('hidden');
     toggleAutoTranscribeBtn.classList.remove('hidden');
     improveTextBtn.classList.add('hidden');
+    improveAllTextBtn.classList.add('hidden');
   }
 }
 
@@ -512,11 +515,11 @@ toggleAutoTranscribeBtn.addEventListener('click', () => {
   }
 });
 
-// Text improvement for badly transcribed text
+// Text improvement for current section
 improveTextBtn.addEventListener('click', async () => {
   if (!state.project || !state.isTextOnly) return;
   
-  const { apiKey, model } = await getConfig();
+  const { apiKey, model, prompt } = await getConfig();
   if (!apiKey) {
     alert('Please set your OpenAI API key in Settings first.');
     return;
@@ -528,15 +531,15 @@ improveTextBtn.addEventListener('click', async () => {
     return;
   }
   
-  const confirmed = confirm('This will use AI to improve the text quality, grammar, and readability. Continue?');
+  const confirmed = confirm('This will use AI to improve the current section\'s text quality, grammar, and readability. Continue?');
   if (!confirmed) return;
   
   improveTextBtn.disabled = true;
   improveTextBtn.textContent = 'Improving...';
-  showStatus('Improving text quality...');
+  showStatus('Improving current section...');
   
   try {
-    const improvedText = await improveText(currentPage.transcript, apiKey, model);
+    const improvedText = await improveText(currentPage.transcript, apiKey, model, prompt);
     currentPage.transcript = improvedText;
     transcriptArea.value = improvedText;
     
@@ -553,7 +556,7 @@ improveTextBtn.addEventListener('click', async () => {
     await saveProject(storableProject);
     
     hideStatus();
-    alert('Text improvement complete!');
+    alert('Section improvement complete!');
   } catch (err) {
     console.error('Text improvement error:', err);
     alert('Failed to improve text. Please check your API key and try again.');
@@ -561,11 +564,97 @@ improveTextBtn.addEventListener('click', async () => {
   }
   
   improveTextBtn.disabled = false;
-  improveTextBtn.textContent = 'Improve Text Quality';
+  improveTextBtn.textContent = 'Improve Current Section';
 });
 
-async function improveText(text, apiKey, model = 'gpt-4o-mini') {
-  const prompt = `Please improve this text by:
+// Improve entire document
+improveAllTextBtn.addEventListener('click', async () => {
+  if (!state.project || !state.isTextOnly) return;
+  
+  const { apiKey, model, prompt } = await getConfig();
+  if (!apiKey) {
+    alert('Please set your OpenAI API key in Settings first.');
+    return;
+  }
+  
+  const sectionsToImprove = state.project.pages.filter(p => p.transcript && p.transcript.trim());
+  if (sectionsToImprove.length === 0) {
+    alert('No text sections found to improve.');
+    return;
+  }
+  
+  const confirmed = confirm(`This will improve all ${sectionsToImprove.length} sections of the document. This may take several minutes and will use ${sectionsToImprove.length} API calls. Continue?`);
+  if (!confirmed) return;
+  
+  improveAllTextBtn.disabled = true;
+  improveAllTextBtn.textContent = 'Improving...';
+  
+  let completed = 0;
+  for (let i = 0; i < state.project.pages.length; i++) {
+    const page = state.project.pages[i];
+    if (!page.transcript || !page.transcript.trim()) continue;
+    
+    showStatus(`Improving section ${completed + 1} of ${sectionsToImprove.length}...`);
+    
+    try {
+      // Switch to this section to show progress
+      if (state.currentPageIndex !== i) {
+        showPage(i);
+      }
+      
+      const improvedText = await improveText(page.transcript, apiKey, model, prompt);
+      page.transcript = improvedText;
+      completed++;
+      
+      // Update transcript area if this is the current section
+      if (state.currentPageIndex === i) {
+        transcriptArea.value = improvedText;
+      }
+      
+      // Save progress periodically
+      if (completed % 3 === 0) {
+        const storableProject = {
+          ...state.project,
+          pages: state.project.pages.map(p => ({
+            imageSrc: p.image ? p.image.src : null,
+            transcript: p.transcript,
+            status: p.status,
+            originalText: p.originalText || null
+          }))
+        };
+        await saveProject(storableProject);
+      }
+      
+      // Small delay to prevent API rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+    } catch (err) {
+      console.error(`Error improving section ${i + 1}:`, err);
+      // Continue with other sections
+    }
+  }
+  
+  // Final save
+  const storableProject = {
+    ...state.project,
+    pages: state.project.pages.map(p => ({
+      imageSrc: p.image ? p.image.src : null,
+      transcript: p.transcript,
+      status: p.status,
+      originalText: p.originalText || null
+    }))
+  };
+  await saveProject(storableProject);
+  
+  hideStatus();
+  improveAllTextBtn.disabled = false;
+  improveAllTextBtn.textContent = 'Improve Entire Document';
+  
+  alert(`Document improvement complete! Successfully improved ${completed} sections.`);
+});
+
+async function improveText(text, apiKey, model = 'gpt-4o-mini', customPrompt = null) {
+  const defaultPrompt = `Please improve this text by:
 1. Fixing spelling errors and typos
 2. Correcting grammar and punctuation
 3. Improving readability while preserving the original meaning
@@ -577,16 +666,18 @@ Please return only the improved text, nothing else.
 Text to improve:
 ${text}`;
 
+  const userPrompt = customPrompt ? `${customPrompt}\n\nText to improve:\n${text}` : defaultPrompt;
+
   const payload = {
     model,
     messages: [
       {
         role: 'system',
-        content: 'You are a helpful assistant that improves text quality while preserving the original meaning and style.',
+        content: customPrompt || 'You are a helpful assistant that improves text quality while preserving the original meaning and style.',
       },
       {
         role: 'user',
-        content: prompt,
+        content: userPrompt,
       },
     ],
   };
