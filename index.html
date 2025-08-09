@@ -15,7 +15,7 @@
   <header>
     <h1>📖 Journal Transcriber</h1>
     <div class="upload-section">
-      <input type="file" id="fileInput" accept=".pdf,image/*" hidden />
+      <input type="file" id="fileInput" accept=".pdf,image/*,.txt" hidden />
       <button id="uploadBtn" class="btn btn-primary btn-upload-header">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
@@ -44,6 +44,7 @@
       <div class="batch-controls">
         <button id="batchTranscribeBtn" class="btn btn-primary">Transcribe All Pages</button>
         <button id="toggleAutoTranscribeBtn" class="btn btn-secondary">Auto-transcribe: ON</button>
+        <button id="improveTextBtn" class="btn btn-warning hidden">Improve Text Quality</button>
       </div>
     </div>
 
@@ -52,7 +53,7 @@
         <canvas id="pageCanvas" class="hidden"></canvas>
         <div id="emptyState">
           <h2>📄 Ready to Transcribe</h2>
-          <p>Upload a PDF or image file using the button above to get started.</p>
+          <p>Upload a PDF, image, or text file using the button above to get started.</p>
         </div>
       </div>
       

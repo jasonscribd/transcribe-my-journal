@@ -24,6 +24,7 @@ const nextPageBtn = document.getElementById('nextPageBtn');
 const pageIndicator = document.getElementById('pageIndicator');
 const batchTranscribeBtn = document.getElementById('batchTranscribeBtn');
 const toggleAutoTranscribeBtn = document.getElementById('toggleAutoTranscribeBtn');
+const improveTextBtn = document.getElementById('improveTextBtn');
 
 // Status overlay elements
 const statusOverlay = document.getElementById('statusOverlay');
@@ -52,6 +53,7 @@ let state = {
   currentView: 'image', // 'image' or 'transcript'
   autoTranscribeDisabled: false,
   batchTranscribing: false,
+  isTextOnly: false, // true when working with uploaded text files
 };
 
 function updatePageNavigation() {
@@ -72,21 +74,29 @@ function showPage(pageIndex) {
   state.currentPageIndex = pageIndex;
   const page = state.project.pages[pageIndex];
   
-  // Always show the image
-  drawImageOnCanvas(page.image);
-  pageCanvas.classList.remove('hidden');
-  emptyState.classList.add('hidden');
+  if (state.isTextOnly) {
+    // Text-only mode: hide image, show transcript directly
+    pageCanvas.classList.add('hidden');
+    emptyState.classList.add('hidden');
+    viewToggle.classList.add('hidden');
+    transcriptPane.classList.remove('hidden');
+    imagePane.classList.add('hidden');
+    state.currentView = 'transcript';
+  } else {
+    // Image mode: show image and toggle
+    drawImageOnCanvas(page.image);
+    pageCanvas.classList.remove('hidden');
+    emptyState.classList.add('hidden');
+    viewToggle.classList.remove('hidden');
+    
+    // Auto-transcribe if no transcript exists and user hasn't disabled auto-transcribe
+    if (!page.transcript && page.status === 'pending' && !state.autoTranscribeDisabled) {
+      transcribeCurrentPage();
+    }
+  }
   
   // Update transcript area
   transcriptArea.value = page.transcript || '';
-  
-  // Show view toggle
-  viewToggle.classList.remove('hidden');
-  
-  // Auto-transcribe if no transcript exists and user hasn't disabled auto-transcribe
-  if (!page.transcript && page.status === 'pending' && !state.autoTranscribeDisabled) {
-    transcribeCurrentPage();
-  }
   
   updatePageNavigation();
   updateView();
@@ -121,15 +131,29 @@ async function handleFiles(files) {
   showStatus('Loading file...');
 
   let pagesData = [];
+  state.isTextOnly = false;
+  
   try {
-    if (file.type === 'application/pdf') {
+    if (file.type === 'text/plain') {
+      // Handle text files
+      const text = await file.text();
+      const pages = splitTextIntoPages(text);
+      pagesData = pages.map((pageText, index) => ({ 
+        image: null, 
+        transcript: pageText, 
+        status: 'done',
+        originalText: pageText // Keep original for improvement
+      }));
+      state.isTextOnly = true;
+      
+    } else if (file.type === 'application/pdf') {
       try {
         const images = await loadPdfAsImages(file);
         pagesData = images.map((img) => ({ image: img, transcript: '', status: 'pending' }));
       } catch (pdfError) {
         hideStatus();
         console.error('PDF loading error:', pdfError);
-        alert('Error loading PDF. Please try uploading an image instead, or check if the PDF is corrupted.');
+        alert('Error loading PDF. Please try uploading an image or text file instead.');
         return;
       }
     } else if (file.type.startsWith('image/')) {
@@ -138,7 +162,7 @@ async function handleFiles(files) {
       pagesData = [{ image: img, transcript: '', status: 'pending' }];
     } else {
       hideStatus();
-      alert('Unsupported file type. Please upload a PDF or image (JPG, PNG).');
+      alert('Unsupported file type. Please upload a PDF, image (JPG, PNG), or text file (.txt).');
       return;
     }
 
@@ -148,24 +172,57 @@ async function handleFiles(files) {
       pages: pagesData,
     };
     
-    // Convert images to storable format for saving
+    // Convert to storable format for saving
     const storableProject = {
       ...state.project,
       pages: state.project.pages.map(p => ({
-        imageSrc: p.image.src,
+        imageSrc: p.image ? p.image.src : null,
         transcript: p.transcript,
-        status: p.status
+        status: p.status,
+        originalText: p.originalText || null
       }))
     };
     await saveProject(storableProject);
 
     hideStatus();
+    updateUIForFileType();
     showPage(0);
     exportBtn.disabled = false;
   } catch (error) {
     hideStatus();
     console.error('Error loading file:', error);
     alert('Error loading file. Please try again or use a different file format.');
+  }
+}
+
+function splitTextIntoPages(text, wordsPerPage = 500) {
+  const words = text.split(/\s+/);
+  const pages = [];
+  
+  for (let i = 0; i < words.length; i += wordsPerPage) {
+    const pageWords = words.slice(i, i + wordsPerPage);
+    pages.push(pageWords.join(' '));
+  }
+  
+  return pages.length > 0 ? pages : [text]; // Fallback to single page if splitting fails
+}
+
+function updateUIForFileType() {
+  if (state.isTextOnly) {
+    // Hide image-related controls, show text improvement controls
+    batchTranscribeBtn.classList.add('hidden');
+    toggleAutoTranscribeBtn.classList.add('hidden');
+    improveTextBtn.classList.remove('hidden');
+    
+    // Update page indicator text
+    if (state.project.pages.length > 1) {
+      pageIndicator.textContent = `Section ${state.currentPageIndex + 1} of ${state.project.pages.length}`;
+    }
+  } else {
+    // Show image-related controls, hide text improvement
+    batchTranscribeBtn.classList.remove('hidden');
+    toggleAutoTranscribeBtn.classList.remove('hidden');
+    improveTextBtn.classList.add('hidden');
   }
 }
 
@@ -454,6 +511,110 @@ toggleAutoTranscribeBtn.addEventListener('click', () => {
     toggleAutoTranscribeBtn.classList.add('btn-secondary');
   }
 });
+
+// Text improvement for badly transcribed text
+improveTextBtn.addEventListener('click', async () => {
+  if (!state.project || !state.isTextOnly) return;
+  
+  const { apiKey, model } = await getConfig();
+  if (!apiKey) {
+    alert('Please set your OpenAI API key in Settings first.');
+    return;
+  }
+  
+  const currentPage = state.project.pages[state.currentPageIndex];
+  if (!currentPage.transcript) {
+    alert('No text to improve on this section.');
+    return;
+  }
+  
+  const confirmed = confirm('This will use AI to improve the text quality, grammar, and readability. Continue?');
+  if (!confirmed) return;
+  
+  improveTextBtn.disabled = true;
+  improveTextBtn.textContent = 'Improving...';
+  showStatus('Improving text quality...');
+  
+  try {
+    const improvedText = await improveText(currentPage.transcript, apiKey, model);
+    currentPage.transcript = improvedText;
+    transcriptArea.value = improvedText;
+    
+    // Save updated project
+    const storableProject = {
+      ...state.project,
+      pages: state.project.pages.map(p => ({
+        imageSrc: p.image ? p.image.src : null,
+        transcript: p.transcript,
+        status: p.status,
+        originalText: p.originalText || null
+      }))
+    };
+    await saveProject(storableProject);
+    
+    hideStatus();
+    alert('Text improvement complete!');
+  } catch (err) {
+    console.error('Text improvement error:', err);
+    alert('Failed to improve text. Please check your API key and try again.');
+    hideStatus();
+  }
+  
+  improveTextBtn.disabled = false;
+  improveTextBtn.textContent = 'Improve Text Quality';
+});
+
+async function improveText(text, apiKey, model = 'gpt-4o-mini') {
+  const prompt = `Please improve this text by:
+1. Fixing spelling errors and typos
+2. Correcting grammar and punctuation
+3. Improving readability while preserving the original meaning
+4. Maintaining the author's voice and style
+5. Preserving paragraph breaks and structure
+
+Please return only the improved text, nothing else.
+
+Text to improve:
+${text}`;
+
+  const payload = {
+    model,
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a helpful assistant that improves text quality while preserving the original meaning and style.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ],
+  };
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const errJson = await res.json();
+      detail = errJson.error?.message || JSON.stringify(errJson);
+    } catch {
+      detail = await res.text();
+    }
+    throw new Error(`OpenAI API error: ${res.status} ${res.statusText}: ${detail}`);
+  }
+  
+  const json = await res.json();
+  const improvedText = json.choices?.[0]?.message?.content?.trim() || text;
+  return improvedText;
+}
 
 // Remove readonly from transcript area
 transcriptArea.removeAttribute('readonly');
