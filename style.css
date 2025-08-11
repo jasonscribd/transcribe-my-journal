@@ -1,34 +1,35 @@
-/* Writer's Black Notebook Theme */
+/* Clean Notes App Theme */
 :root {
-  /* Black Notebook Color Palette */
-  --color-primary: #d4af37;
-  --color-primary-dark: #b8941f;
-  --color-primary-light: #f4e4a6;
-  --color-secondary: #8b7355;
-  --color-secondary-light: #a68b5b;
-  --color-success: #6b8e23;
-  --color-danger: #8b0000;
-  --color-warning: #ff8c00;
+  /* Clean Color Palette */
+  --color-primary: #3182ce;
+  --color-primary-dark: #2c5aa0;
+  --color-primary-light: #63b3ed;
+  --color-secondary: #718096;
+  --color-secondary-light: #a0aec0;
+  --color-success: #38a169;
+  --color-danger: #e53e3e;
+  --color-warning: #d69e2e;
   
-  /* Notebook Colors - Rich blacks and creams */
-  --color-white: #faf7f0;
-  --color-paper: #f5f2e8;
-  --color-gray-50: #2a2a2a;
-  --color-gray-100: #333333;
-  --color-gray-200: #404040;
-  --color-gray-300: #555555;
-  --color-gray-400: #777777;
-  --color-gray-500: #999999;
-  --color-gray-600: #bbbbbb;
-  --color-gray-700: #dddddd;
-  --color-gray-800: #f0f0f0;
-  --color-gray-900: #faf7f0;
+  /* Clean App Colors */
+  --color-white: #ffffff;
+  --color-paper: #ffffff;
+  --color-gray-50: #f7fafc;
+  --color-gray-100: #edf2f7;
+  --color-gray-200: #e2e8f0;
+  --color-gray-300: #cbd5e0;
+  --color-gray-400: #a0aec0;
+  --color-gray-500: #718096;
+  --color-gray-600: #4a5568;
+  --color-gray-700: #2d3748;
+  --color-gray-800: #1a202c;
+  --color-gray-900: #171923;
   
-  /* Notebook specific */
-  --color-notebook-black: #1a1a1a;
-  --color-notebook-line: #333333;
-  --color-ink: #2c2c2c;
-  --color-gold-accent: #d4af37;
+  /* App specific */
+  --color-bg: #ffffff;
+  --color-surface: #f8f9fa;
+  --color-border: #e2e8f0;
+  --color-text: #2d3748;
+  --color-text-secondary: #718096;
   
   /* Spacing */
   --space-1: 0.25rem;
@@ -59,31 +60,26 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-weight: 400;
   line-height: 1.6;
-  color: var(--color-white);
-  background: var(--color-notebook-black);
+  color: var(--color-text);
+  background: var(--color-gray-50);
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-image: 
-    linear-gradient(90deg, var(--color-notebook-line) 1px, transparent 1px),
-    linear-gradient(var(--color-notebook-black) 1px, transparent 1px);
-  background-size: 40px 24px;
-  background-position: -1px -1px;
 }
 
 /* Header Styling */
 header {
-  background: linear-gradient(135deg, var(--color-notebook-black) 0%, var(--color-gray-100) 100%);
-  color: var(--color-gold-accent);
+  background: var(--color-white);
+  color: var(--color-text);
   padding: var(--space-4) var(--space-6);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  border-bottom: 2px solid var(--color-gold-accent);
+  box-shadow: var(--shadow-sm);
+  border-bottom: 1px solid var(--color-border);
 }
 
 header h1 {
@@ -105,13 +101,13 @@ header h1 {
 
 /* Footer Styling */
 footer {
-  background: var(--color-gray-50);
-  border-top: 2px solid var(--color-gold-accent);
+  background: var(--color-white);
+  border-top: 1px solid var(--color-border);
   padding: var(--space-4) var(--space-6);
   display: flex;
   justify-content: center;
   gap: var(--space-4);
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 -1px 3px var(--color-shadow);
 }
 
 /* Modern Button System */
@@ -130,6 +126,9 @@ footer {
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+  background: var(--color-primary);
+  color: var(--color-white);
+  box-shadow: var(--shadow-sm);
 }
 
 .btn:disabled {
@@ -139,21 +138,20 @@ footer {
 
 .btn-primary {
   background: var(--color-primary);
-  color: var(--color-notebook-black);
+  color: var(--color-white);
   box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-primary-dark);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-light);
+  background: var(--color-primary-dark);
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
 }
 
 .btn-secondary {
   background: var(--color-gray-100);
-  color: var(--color-white);
-  border: 1px solid var(--color-gray-200);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
 }
 
 .btn-secondary:hover:not(:disabled) {
@@ -229,7 +227,7 @@ footer {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--color-notebook-black);
+  background: var(--color-gray-50);
 }
 
 #imagePane {
@@ -239,19 +237,22 @@ footer {
   align-items: center;
   overflow: auto;
   padding: var(--space-6);
-  background: var(--color-notebook-black);
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  margin: var(--space-4);
+  box-shadow: var(--shadow-sm);
 }
 
 #emptyState {
   text-align: center;
-  color: var(--color-white);
-  opacity: 0.7;
+  color: var(--color-text-secondary);
 }
 
 #emptyState h2 {
   font-size: 1.5rem;
   margin-bottom: var(--space-4);
-  color: var(--color-gold-accent);
+  color: var(--color-text);
 }
 
 #emptyState p {
@@ -275,31 +276,37 @@ footer {
   justify-content: center;
   gap: var(--space-2);
   background: var(--color-gray-50);
-  border-top: 1px solid var(--color-gold-accent);
+  border-top: 1px solid var(--color-border);
 }
 
 .toggle-btn {
   min-width: 120px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  background: var(--color-white);
+  color: var(--color-text);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .toggle-btn.active {
-  background: var(--color-gold-accent);
-  color: var(--color-notebook-black);
+  background: var(--color-primary);
+  color: var(--color-white);
+  border-color: var(--color-primary);
 }
 
 #transcriptPane {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--color-paper);
-  background-image: 
-    repeating-linear-gradient(
-      transparent,
-      transparent 23px,
-      var(--color-gold-accent) 23px,
-      var(--color-gold-accent) 24px
-    );
-  background-size: 100% 24px;
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin: var(--space-4);
 }
 
 #transcriptArea {
@@ -307,10 +314,10 @@ footer {
   padding: var(--space-6);
   border: none;
   resize: none;
-  font-family: 'Georgia', 'Times New Roman', serif;
-  font-size: 1rem;
-  line-height: 24px;
-  color: var(--color-ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--color-text);
   background: transparent;
   outline: none;
 }
