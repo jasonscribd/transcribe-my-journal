@@ -6,6 +6,7 @@ import { exportTxt } from './exporter.js';
 
 const fileInput = document.getElementById('fileInput');
 const uploadBtn = document.getElementById('uploadBtn');
+const pasteTextBtn = document.getElementById('pasteTextBtn');
 const dropOverlay = document.getElementById('dropOverlay');
 const pageCanvas = document.getElementById('pageCanvas');
 const transcriptArea = document.getElementById('transcriptArea');
@@ -49,6 +50,13 @@ const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 const exportAllBtn = document.getElementById('exportAllBtn');
 const compressImagesCheckbox = document.getElementById('compressImagesCheckbox');
 const maxTokensSelect = document.getElementById('maxTokensSelect');
+
+// Paste text modal elements
+const pasteTextModal = document.getElementById('pasteTextModal');
+const pasteTextArea = document.getElementById('pasteTextArea');
+const closePasteModal = document.getElementById('closePasteModal');
+const cancelPasteBtn = document.getElementById('cancelPasteBtn');
+const processPasteBtn = document.getElementById('processPasteBtn');
 
 let state = {
   project: null, // { id, title, createdAt, pages: [...] }
@@ -124,6 +132,51 @@ function drawImageOnCanvas(img) {
   pageCanvas.width = img.width;
   pageCanvas.height = img.height;
   ctx.drawImage(img, 0, 0);
+}
+
+async function handlePastedText(text) {
+  exportBtn.disabled = true;
+  showStatus('Processing pasted text...');
+  
+  try {
+    const pages = splitTextIntoPages(text);
+    const pagesData = pages.map((pageText, index) => ({ 
+      image: null, 
+      transcript: pageText, 
+      status: 'done',
+      originalText: pageText // Keep original for improvement
+    }));
+    
+    state.isTextOnly = true;
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    state.project = {
+      title: `Pasted Text ${timestamp}`,
+      createdAt: Date.now(),
+      pages: pagesData,
+    };
+    
+    // Convert to storable format for saving
+    const storablePages = pagesData.map(page => ({
+      ...page,
+      imageSrc: page.image ? getImageDataUrl(page.image) : null,
+      image: undefined // Remove HTMLImageElement reference
+    }));
+    
+    await saveProject({ ...state.project, pages: storablePages });
+    
+    state.currentPageIndex = 0;
+    updatePageNavigation();
+    updateUIForFileType();
+    showPage(0);
+    hideStatus();
+    exportBtn.disabled = false;
+    
+  } catch (error) {
+    hideStatus();
+    console.error('Error processing pasted text:', error);
+    alert('Error processing the pasted text. Please try again.');
+  }
 }
 
 async function handleFiles(files) {
@@ -374,6 +427,49 @@ exportAllBtn.addEventListener('click', async () => {
 // Upload & drag-drop
 uploadBtn.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+// Paste text functionality
+pasteTextBtn.addEventListener('click', () => {
+  pasteTextArea.value = '';
+  pasteTextModal.classList.remove('hidden');
+  pasteTextArea.focus();
+});
+
+closePasteModal.addEventListener('click', () => {
+  pasteTextModal.classList.add('hidden');
+});
+
+cancelPasteBtn.addEventListener('click', () => {
+  pasteTextModal.classList.add('hidden');
+});
+
+processPasteBtn.addEventListener('click', () => {
+  const text = pasteTextArea.value.trim();
+  if (text) {
+    handlePastedText(text);
+    pasteTextModal.classList.add('hidden');
+  }
+});
+
+// Close modal when clicking outside
+pasteTextModal.addEventListener('click', (e) => {
+  if (e.target === pasteTextModal) {
+    pasteTextModal.classList.add('hidden');
+  }
+});
+
+// Handle Ctrl+V/Cmd+V shortcut
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'v' && !e.target.matches('input, textarea')) {
+    e.preventDefault();
+    pasteTextBtn.click();
+  }
+  
+  // Close modal with Escape key
+  if (e.key === 'Escape' && !pasteTextModal.classList.contains('hidden')) {
+    pasteTextModal.classList.add('hidden');
+  }
+});
 
 document.addEventListener('dragover', (e) => {
   e.preventDefault();
