@@ -10,14 +10,14 @@ export async function transcribeImage(dataUrl, apiKey, model = 'gpt-4o-mini', pr
         role: 'system',
         content:
           prompt ||
-          'You are a helpful assistant that accurately transcribes any handwritten text you are shown into clear, well-punctuated plain text.',
+          'You are an expert editor who turns handwritten journal entries into clean, well-punctuated plain text. Fix spelling errors, add punctuation, make educated guesses about wrongly transcribed words based on context, and add frequent paragraph breaks to make the text more readable. Preserve the author\'s original words and their order.',
       },
       {
         role: 'user',
         content: [
           {
             type: 'text',
-            text: 'Please transcribe the handwritten text in this image.',
+            text: 'Please transcribe the handwritten text in this image, adding appropriate paragraph breaks and improving readability while preserving the original meaning.',
           },
           {
             type: 'image_url',

@@ -196,7 +196,7 @@ footer {
 
 #pageNavigation {
   background: var(--color-gray-50);
-  border-bottom: 1px solid var(--color-gold-accent);
+  border-bottom: 1px solid var(--color-border);
   padding: var(--space-3) var(--space-6);
   display: flex;
   justify-content: space-between;
@@ -205,10 +205,17 @@ footer {
   gap: var(--space-3);
 }
 
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
 #pageIndicator {
-  color: var(--color-white);
+  color: var(--color-text);
   font-weight: 500;
   font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 .batch-controls {
@@ -605,25 +612,172 @@ footer {
 }
 
 /* Responsive Design */
+/* Mobile Responsive Design */
 @media (max-width: 768px) {
-  #sidebar {
-    width: 240px;
-  }
-  
+  /* Header adjustments */
   header {
     padding: var(--space-3) var(--space-4);
+    flex-direction: column;
+    gap: var(--space-3);
+    text-align: center;
   }
   
   header h1 {
     font-size: 1.25rem;
+    margin: 0;
   }
   
-  .toolbar {
+  .upload-section {
+    justify-content: center;
+    flex-wrap: wrap;
     gap: var(--space-2);
   }
   
+  .btn-upload-header {
+    padding: var(--space-2) var(--space-4);
+    font-size: 0.875rem;
+  }
+  
+  /* Page navigation - stack vertically on mobile */
+  #pageNavigation {
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3);
+  }
+  
+  .nav-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .batch-controls {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  
+  .batch-controls .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Content area - stack vertically */
+  #content {
+    padding: var(--space-2);
+  }
+  
+  #imagePane, #transcriptPane {
+    margin: var(--space-2);
+  }
+  
+  /* View toggle - full width buttons */
+  #viewToggle {
+    padding: var(--space-3);
+  }
+  
+  .toggle-btn {
+    min-width: auto;
+    flex: 1;
+  }
+  
+  /* Modal adjustments */
+  .modal-content {
+    width: 95%;
+    margin: var(--space-4);
+  }
+  
+  .modal-header, .modal-body {
+    padding: var(--space-4);
+  }
+  
+  #pasteTextArea {
+    min-height: 150px;
+  }
+  
+  .modal-actions {
+    flex-direction: column-reverse;
+    gap: var(--space-2);
+  }
+  
+  .modal-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Settings dialog */
+  #settingsDialog {
+    width: 95vw;
+    max-width: none;
+  }
+  
+  #settingsDialog form {
+    padding: var(--space-4);
+  }
+  
+  /* Footer adjustments */
+  footer {
+    padding: var(--space-3) var(--space-4);
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  
+  footer .btn {
+    flex: 1;
+    min-width: 120px;
+  }
+  
+  /* General button adjustments */
   .btn {
     padding: var(--space-2) var(--space-3);
+    font-size: 0.875rem;
+  }
+  
+  /* Text sizing */
+  #transcriptArea {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+  
+  /* Reduce spacing overall */
+  :root {
+    --space-6: 1rem;
+    --space-8: 1.5rem;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  header {
+    padding: var(--space-2) var(--space-3);
+  }
+  
+  header h1 {
+    font-size: 1.125rem;
+  }
+  
+  .upload-section {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .btn-upload-header {
+    width: 100%;
+  }
+  
+  #pageNavigation {
+    padding: var(--space-2);
+  }
+  
+  #imagePane, #transcriptPane {
+    margin: var(--space-1);
+  }
+  
+  .modal-content {
+    width: 98%;
+    margin: var(--space-2);
+  }
+  
+  .keyboard-hint {
     font-size: 0.8125rem;
+    padding: var(--space-2);
   }
 }

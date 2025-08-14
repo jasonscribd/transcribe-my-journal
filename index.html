@@ -64,9 +64,11 @@
 
   <main id="app">
     <div id="pageNavigation" class="hidden">
-      <button id="prevPageBtn" class="btn btn-secondary">← Previous</button>
-      <span id="pageIndicator">Page 1 of 1</span>
-      <button id="nextPageBtn" class="btn btn-secondary">Next →</button>
+      <div class="nav-controls">
+        <button id="prevPageBtn" class="btn btn-secondary">← Previous</button>
+        <span id="pageIndicator">Page 1 of 1</span>
+        <button id="nextPageBtn" class="btn btn-secondary">Next →</button>
+      </div>
       <div class="batch-controls">
         <button id="batchTranscribeBtn" class="btn btn-primary">Transcribe All Pages</button>
         <button id="toggleAutoTranscribeBtn" class="btn btn-secondary">Auto-transcribe: ON</button>
@@ -132,7 +134,13 @@
       </label>
       <label>
         System Prompt
-        <textarea id="promptInput" rows="4">You are a helpful assistant that accurately transcribes handwritten journal entries into clean, well-punctuated plain text while preserving line breaks and the personal tone.</textarea>
+        <textarea id="promptInput" rows="6">You are an expert editor who turns handwritten or badly transcribed journal entries into clean, well-punctuated plain text. 
+
+You fix spelling errors, add punctuation, and make educated guesses about wrongly transcribed words based on context. 
+
+You add frequent paragraph breaks to make the block text more readable. 
+
+At the same time, you preserve the author's original words and the order of those words.</textarea>
       </label>
       <div class="settings-section">
         <h3>Cost Optimization</h3>
