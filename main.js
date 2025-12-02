@@ -1,6 +1,6 @@
 import { loadPdfAsImages } from './pdf_renderer.js';
 import { getConfig, saveConfig, clearApiKey } from './storage.js';
-import { transcribeImage } from './openai.js';
+import { transcribeImage } from './mistral.js';
 import { saveProject, getAllProjects } from './db.js';
 import { exportTxt } from './exporter.js';
 
@@ -316,7 +316,7 @@ async function getOptimizedImageData(canvas, compressImages = true) {
 async function transcribeCurrentPage() {
   const config = await getConfig();
   if (!config.apiKey) {
-    alert('Please set your OpenAI API key in Settings first.');
+    alert('Please set your Mistral API key in Settings first.');
     return;
   }
   
@@ -359,7 +359,7 @@ async function transcribeCurrentPage() {
 settingsBtn.addEventListener('click', async () => {
   const config = await getConfig();
   apiKeyInput.value = config.apiKey || '';
-  modelInput.value = config.model || 'gpt-4o-mini';
+  modelInput.value = config.model || 'pixtral-large-latest';
   promptInput.value = config.prompt || promptInput.value;
   compressImagesCheckbox.checked = config.compressImages !== false; // default true
   maxTokensSelect.value = config.maxTokens || '1000';
@@ -540,7 +540,7 @@ batchTranscribeBtn.addEventListener('click', async () => {
   
   const config = await getConfig();
   if (!config.apiKey) {
-    alert('Please set your OpenAI API key in Settings first.');
+    alert('Please set your Mistral API key in Settings first.');
     return;
   }
   
@@ -643,7 +643,7 @@ improveTextBtn.addEventListener('click', async () => {
   
   const { apiKey, model, prompt } = await getConfig();
   if (!apiKey) {
-    alert('Please set your OpenAI API key in Settings first.');
+    alert('Please set your Mistral API key in Settings first.');
     return;
   }
   
@@ -695,7 +695,7 @@ improveAllTextBtn.addEventListener('click', async () => {
   
   const { apiKey, model, prompt } = await getConfig();
   if (!apiKey) {
-    alert('Please set your OpenAI API key in Settings first.');
+    alert('Please set your Mistral API key in Settings first.');
     return;
   }
   
@@ -775,7 +775,7 @@ improveAllTextBtn.addEventListener('click', async () => {
   alert(`Document improvement complete! Successfully improved ${completed} sections.`);
 });
 
-async function improveText(text, apiKey, model = 'gpt-4o-mini', customPrompt = null) {
+async function improveText(text, apiKey, model = 'mistral-large-latest', customPrompt = null) {
   const defaultPrompt = `Please improve this text by:
 1. Fixing spelling errors and typos
 2. Correcting grammar and punctuation
@@ -804,7 +804,7 @@ ${text}`;
     ],
   };
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await fetch('https://api.mistral.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -821,7 +821,7 @@ ${text}`;
     } catch {
       detail = await res.text();
     }
-    throw new Error(`OpenAI API error: ${res.status} ${res.statusText}: ${detail}`);
+    throw new Error(`Mistral API error: ${res.status} ${res.statusText}: ${detail}`);
   }
   
   const json = await res.json();

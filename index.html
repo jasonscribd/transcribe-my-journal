@@ -121,15 +121,16 @@
     <form method="dialog">
       <h2>Settings</h2>
       <label>
-        OpenAI API Key
-        <input type="password" id="apiKeyInput" placeholder="sk-..." />
+        Mistral API Key
+        <input type="password" id="apiKeyInput" placeholder="Your Mistral API key..." />
       </label>
       <label>
         Model Name
         <select id="modelInput">
-          <option value="gpt-4o-mini">GPT-4o Mini (Recommended - $0.15/1M tokens)</option>
-          <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Budget - $0.50/1M tokens)</option>
-          <option value="gpt-4o">GPT-4o (Premium - $2.50/1M tokens)</option>
+          <option value="pixtral-large-latest">Pixtral Large (Recommended for vision - Latest)</option>
+          <option value="pixtral-12b-2409">Pixtral 12B (Alternative vision model)</option>
+          <option value="mistral-large-latest">Mistral Large (Text-only tasks)</option>
+          <option value="mistral-medium-latest">Mistral Medium (Text-only tasks)</option>
         </select>
       </label>
       <label>

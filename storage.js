@@ -13,9 +13,14 @@ export async function getConfig() {
   }
 }
 
-export async function saveConfig({ apiKey, model, prompt }) {
+export async function saveConfig({ apiKey, model, prompt, compressImages, maxTokens }) {
   const current = await getConfig();
-  const newCfg = { ...current, apiKey, model, prompt };
+  const newCfg = { ...current };
+  if (apiKey !== undefined) newCfg.apiKey = apiKey;
+  if (model !== undefined) newCfg.model = model;
+  if (prompt !== undefined) newCfg.prompt = prompt;
+  if (compressImages !== undefined) newCfg.compressImages = compressImages;
+  if (maxTokens !== undefined) newCfg.maxTokens = maxTokens;
   localStorage.setItem(CONFIG_KEY, JSON.stringify(newCfg));
 }
 
